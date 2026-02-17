@@ -1,0 +1,76 @@
+:root {
+  --bg-a: #f4fbff;
+  --bg-b: #e8f3ff;
+  --ink: #0e2433;
+  --muted: #4f6675;
+  --accent: #05668d;
+  --accent-2: #00a896;
+  --card: #ffffff;
+}
+
+body {
+  font-family: "Manrope", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 10% 10%, #d8efff 0%, transparent 30%),
+    radial-gradient(circle at 90% 0%, #d6fff9 0%, transparent 35%),
+    linear-gradient(180deg, var(--bg-a), var(--bg-b));
+  min-height: 100vh;
+}
+
+.hero {
+  background: linear-gradient(135deg, #003049, #0077b6);
+  color: #fff;
+  border-radius: 1rem;
+}
+
+.btn-accent {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+}
+
+.btn-accent:hover {
+  opacity: 0.93;
+  color: #fff;
+}
+
+.score-chip {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: #fff;
+  background: conic-gradient(#00a896 0deg, #02c39a 220deg, #1d3557 360deg);
+}
+
+.result-item {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: #f8fbff;
+}
+
+.progress {
+  height: 0.75rem;
+  background-color: #dce9f3;
+}
+
+.score-bar {
+  background: linear-gradient(90deg, #f8961e, #f9c74f, #43aa8b);
+}
+
+#map {
+  height: 420px;
+  width: 100%;
+  border-radius: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  #map {
+    height: 320px;
+  }
+}
