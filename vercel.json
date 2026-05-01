@@ -14,8 +14,7 @@
     "FLASK_APP": "app.py"
   },
   "installCommand": "pip install -r requirements.txt",
-  "buildCommand": "flask db upgrade"
-}
+  "buildCommand": "flask db upgrade && vercel build",
   "routes": [
     {
       "src": "/(.*)",
