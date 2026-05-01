@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ 'Edit Shelter' if shelter else 'New Shelter' }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <main class="auth-page-shell manage-page-wide">
+    <section class="auth-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow mb-1">Shelter Form</p>
+          <h1 class="panel-title">{{ 'Edit shelter' if shelter else 'Create shelter' }}</h1>
+        </div>
+        <a class="btn btn-ghost" href="{{ url_for('management_web.shelters') }}">Back</a>
+      </div>
+      {% if error %}
+      <div class="status-banner is-error">{{ error }}</div>
+      {% endif %}
+      <form method="post" class="control-form">
+        <div class="field-grid">
+          <div class="field-block">
+            <label class="form-label" for="name">Name</label>
+            <input id="name" name="name" class="form-control" value="{{ form_data.name or '' }}" required>
+          </div>
+          <div class="field-block">
+            <label class="form-label" for="distance">Distance</label>
+            <input id="distance" name="distance" type="number" step="0.1" min="0" class="form-control" value="{{ form_data.distance or '' }}" required>
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="field-block">
+            <label class="form-label" for="capacity">Capacity</label>
+            <input id="capacity" name="capacity" type="number" min="0" class="form-control" value="{{ form_data.capacity or '' }}" required>
+          </div>
+          <div class="field-block">
+            <label class="form-label" for="available_beds">Available beds</label>
+            <input id="available_beds" name="available_beds" type="number" min="0" class="form-control" value="{{ form_data.available_beds or '' }}" required>
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="field-block">
+            <label class="form-label" for="accessibility">Accessibility</label>
+            <select id="accessibility" name="accessibility" class="form-select">
+              {% for value in ['easy', 'moderate', 'difficult'] %}
+              <option value="{{ value }}" {% if form_data.accessibility == value %}selected{% endif %}>{{ value|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field-block">
+            <label class="form-label" for="medical_facility">Medical support</label>
+            <select id="medical_facility" name="medical_facility" class="form-select">
+              {% for value in ['none', 'basic', 'advanced'] %}
+              <option value="{{ value }}" {% if form_data.medical_facility == value %}selected{% endif %}>{{ value|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="field-block">
+            <label class="form-label" for="elevation_level">Elevation</label>
+            <select id="elevation_level" name="elevation_level" class="form-select">
+              {% for value in ['low', 'medium', 'high'] %}
+              <option value="{{ value }}" {% if form_data.elevation_level == value %}selected{% endif %}>{{ value|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field-block">
+            <label class="form-label" for="proximity_to_water">Water proximity</label>
+            <select id="proximity_to_water" name="proximity_to_water" class="form-select">
+              {% for value in ['very close', 'moderate', 'far'] %}
+              <option value="{{ value }}" {% if form_data.proximity_to_water == value %}selected{% endif %}>{{ value|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="field-block">
+            <label class="form-label" for="latitude">Latitude</label>
+            <input id="latitude" name="latitude" type="number" step="0.0001" class="form-control" value="{{ form_data.latitude or '' }}">
+          </div>
+          <div class="field-block">
+            <label class="form-label" for="longitude">Longitude</label>
+            <input id="longitude" name="longitude" type="number" step="0.0001" class="form-control" value="{{ form_data.longitude or '' }}">
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-signal" type="submit">{{ 'Save Changes' if shelter else 'Create Shelter' }}</button>
+          {% if shelter %}
+          <a class="btn btn-ghost" href="{{ url_for('management_web.shelter_status', shelter_id=shelter.id) }}">Update Status</a>
+          {% endif %}
+        </div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

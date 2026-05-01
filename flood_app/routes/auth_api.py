@@ -4,7 +4,7 @@ from ..models import USER_ROLES
 from ..schemas.auth import parse_auth_json, validate_login_payload, validate_signup_payload
 from ..services.auth import AuthService, login_required, roles_required
 
-api_auth_bp = Blueprint("api_auth", __name__, url_prefix="/auth")
+api_auth_bp = Blueprint("api_auth", __name__)
 
 
 def _user_payload(user):

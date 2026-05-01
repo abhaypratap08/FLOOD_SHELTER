@@ -44,6 +44,10 @@ body {
   padding: 48px 0;
 }
 
+.manage-page-wide {
+  width: min(980px, calc(100% - 24px));
+}
+
 .auth-card {
   padding: 24px;
   border-radius: var(--radius-xl);
@@ -197,6 +201,12 @@ body {
   grid-template-columns: 360px minmax(0, 1fr);
   gap: 22px;
   margin-top: 22px;
+}
+
+.manage-grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 22px;
 }
 
 .control-panel,
@@ -457,6 +467,10 @@ body {
   padding: 20px;
 }
 
+.manage-card {
+  min-width: 0;
+}
+
 .section-head {
   display: flex;
   justify-content: space-between;
@@ -468,6 +482,57 @@ body {
 .section-title {
   margin: 0;
   font-size: 1.2rem;
+}
+
+.summary-badge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(29, 91, 82, 0.08);
+  color: var(--signal);
+  font-weight: 700;
+}
+
+.manage-table-wrap {
+  overflow: auto;
+}
+
+.manage-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.manage-table th,
+.manage-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.manage-table th {
+  text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.manage-row-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.manage-row-actions a {
+  color: var(--signal);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.audit-detail-row td {
+  font-size: 0.92rem;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .chart-frame {
@@ -598,6 +663,10 @@ canvas {
 
 @media (max-width: 1180px) {
   .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manage-grid {
     grid-template-columns: 1fr;
   }
 

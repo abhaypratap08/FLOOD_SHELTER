@@ -18,9 +18,15 @@
       <div class="auth-strip-card">
         <div>
           <strong>{{ current_user.full_name }}</strong>
-          <span class="auth-meta">{{ current_user.role|replace('_', ' ')|title }} • {{ current_user.email }}</span>
+          <span class="auth-meta">{{ current_user.role|replace('_', ' ')|title }} | {{ current_user.email }}</span>
         </div>
         <div class="auth-actions">
+          {% if current_user.role in ['admin', 'shelter_manager', 'response_officer'] %}
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('management_web.shelters') }}">Operations</a>
+          {% endif %}
+          {% if current_user.role in ['admin', 'response_officer'] %}
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('management_web.audit_logs') }}">Audit</a>
+          {% endif %}
           <a class="btn btn-ghost btn-sm" href="{{ url_for('auth.me') }}">Profile</a>
           <form method="post" action="{{ url_for('auth.logout') }}">
             <button class="btn btn-ghost btn-sm" type="submit">Logout</button>

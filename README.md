@@ -5,6 +5,7 @@ This project recommends safe flood shelters using fuzzy logic. It now supports:
 - CLI mode (`user_input.py`)
 - Desktop GUI (Tkinter) (`desktop_gui.py`)
 - Web app (Flask + Bootstrap + Chart.js + Leaflet) (`app.py`)
+- Session-based authentication scaffold with roles
 
 ## Features
 
@@ -14,6 +15,21 @@ This project recommends safe flood shelters using fuzzy logic. It now supports:
 - Interactive map with shelter pins and score popups
 - Geolocation-backed shelters (`latitude`/`longitude` stored in SQLite)
 - JSON API endpoint for integrations (`/api/recommend`)
+- Web auth routes: `/auth/login`, `/auth/signup`, `/auth/me`, `/auth/logout`
+- API auth routes: `/api/auth/signup`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`
+- Shelter management routes:
+  - `GET /api/shelters`
+  - `GET /api/shelters/<id>`
+  - `POST /api/shelters`
+  - `PUT|PATCH /api/shelters/<id>`
+  - `POST /api/shelters/<id>/status`
+  - `GET /api/audit-logs`
+- Shelter management web pages:
+  - `/manage/shelters`
+  - `/manage/shelters/new`
+  - `/manage/shelters/<id>/edit`
+  - `/manage/shelters/<id>/status`
+  - `/manage/audit-logs`
 
 ## Project Structure
 
@@ -23,6 +39,7 @@ This project recommends safe flood shelters using fuzzy logic. It now supports:
 - `flood_app/repositories/`: database access layer
 - `flood_app/models/`: SQLAlchemy models
 - `flood_app/schemas/`: shared input choices and validation
+- `flood_app/services/auth.py`: session auth, password hashing, role guards
 - `membership_func.py`: fuzzy membership functions and rule base
 - `recommender.py`: compatibility wrapper for legacy CLI/desktop entry points
 - `database.py`: creates and seeds `shelter.db`
@@ -94,6 +111,22 @@ The backend model layer is now scaffolded for the next production entities:
 - `recommendation_logs`
 - `alerts`
 - `audit_logs`
+
+Current auth scaffold:
+
+- password hashing with Werkzeug
+- session-based login state
+- roles: `admin`, `shelter_manager`, `citizen`, `response_officer`
+- role-protected API example at `/api/auth/roles`
+- public signup creates `citizen` accounts only
+
+Current operations scaffold:
+
+- shelter CRUD API for protected roles
+- shelter status update API for managers/admins
+- search/filter support on shelter listing
+- audit log entries written for shelter create/update/status changes
+- server-rendered management pages for admins/managers
 
 These are defined as SQLAlchemy models and are intended to be created through migrations, not by `database.py`.
 
