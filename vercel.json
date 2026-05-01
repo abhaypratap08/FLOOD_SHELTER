@@ -10,16 +10,12 @@
     }
   ],
   "env": {
-    "FLASK_ENV": "production"
-  },
-  "build": {
-    "env": {
-      "FLASK_APP": "app.py"
-    }
+    "FLASK_ENV": "production",
+    "FLASK_APP": "app.py"
   },
   "installCommand": "pip install -r requirements.txt",
-  "buildCommand": "flask db upgrade && vercel build"
-,
+  "buildCommand": "flask db upgrade"
+}
   "routes": [
     {
       "src": "/(.*)",
