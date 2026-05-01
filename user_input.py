@@ -1,13 +1,33 @@
 from recommender import recommend_shelters
+from flood_app.schemas.recommendation import CHOICES, validate_num_people
+
+
+def prompt_positive_int(prompt):
+    while True:
+        raw_value = input(prompt).strip()
+        try:
+            value = validate_num_people(raw_value)
+            return value
+        except ValueError:
+            print("Invalid input. Enter a positive whole number (example: 4).")
+
+
+def prompt_choice(prompt, options):
+    allowed = "/".join(options)
+    while True:
+        value = input(f"{prompt} ({allowed}): ").strip().lower()
+        if value in options:
+            return value
+        print(f"Choose one of: {allowed}.")
 
 
 def main():
-    num_people = int(input("Enter number of people: ").strip())
-    distance_level = input("How far can you travel? (near / medium / far): ").strip().lower()
-    accessibility_required = input("Accessibility needed? (easy / moderate / difficult): ").strip().lower()
-    elevation_input = input("Your elevation level? (low / medium / high): ").strip().lower()
-    proximity_input = input("How close to water? (very close / moderate / far): ").strip().lower()
-    medical_input = input("Medical support needed? (none / basic / advanced): ").strip().lower()
+    num_people = prompt_positive_int("Enter number of people: ")
+    distance_level = prompt_choice("How far can you travel?", CHOICES["distance_level"])
+    accessibility_required = prompt_choice("Accessibility needed?", CHOICES["accessibility_required"])
+    elevation_input = prompt_choice("Your elevation level?", CHOICES["elevation_input"])
+    proximity_input = prompt_choice("How close to water?", CHOICES["proximity_input"])
+    medical_input = prompt_choice("Medical support needed?", CHOICES["medical_input"])
 
     data = recommend_shelters(
         num_people=num_people,

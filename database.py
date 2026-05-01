@@ -5,6 +5,7 @@ import sqlite3
 conn = sqlite3.connect('shelter.db')
 c = conn.cursor()
 
+c.execute("DROP TABLE IF EXISTS app_metadata")
 c.execute("DROP TABLE IF EXISTS shelters")
 
 c.execute("""
@@ -20,6 +21,13 @@ c.execute("""
         medical_facility TEXT,
         latitude REAL,
         longitude REAL
+    )
+""")
+
+c.execute("""
+    CREATE TABLE app_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
     )
 """)
 
@@ -57,6 +65,14 @@ c.executemany("""
     (name, capacity, available_beds, distance, accessibility, elevation_level, proximity_to_water, medical_facility, latitude, longitude)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """, shelters_data)
+
+c.executemany(
+    "INSERT INTO app_metadata (key, value) VALUES (?, ?)",
+    [
+        ("source_type", "demo"),
+        ("dataset_name", "Built-in demo shelters"),
+    ],
+)
 
 conn.commit()
 conn.close()

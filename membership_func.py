@@ -1,117 +1,191 @@
-#Defines membership functions and rules
+# Defines fuzzy membership functions and a compact rule base.
+
+from functools import lru_cache
 
 import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 
-def get_fuzzy_simulator(capacity_val, distance_val, accessibility_val, elevation_val, proximity_val, medical_val):
 
-  distance=ctrl.Antecedent(np.arange(0,21,1),'distance')
-  distance['near']=fuzz.trimf(distance.universe,[0,0,7])
-  distance['medium']=fuzz.trimf(distance.universe,[5,10,15])
-  distance['far']=fuzz.trimf(distance.universe,[12,20,20])
+@lru_cache(maxsize=1)
+def _build_control_system():
+    distance = ctrl.Antecedent(np.arange(0, 21, 1), "distance")
+    distance["near"] = fuzz.trapmf(distance.universe, [0, 0, 3, 7])
+    distance["medium"] = fuzz.trimf(distance.universe, [4, 9, 14])
+    distance["far"] = fuzz.trapmf(distance.universe, [11, 15, 20, 20])
 
-  capacity=ctrl.Antecedent(np.arange(0,101,1),'capacity')
-  capacity['low']=fuzz.trimf(capacity.universe,[0,0,40])
-  capacity['medium']=fuzz.trimf(capacity.universe,[30,50,70])
-  capacity['high']=fuzz.trimf(capacity.universe,[60,100,100])
+    capacity = ctrl.Antecedent(np.arange(0, 101, 1), "capacity")
+    capacity["low"] = fuzz.trapmf(capacity.universe, [0, 0, 20, 40])
+    capacity["medium"] = fuzz.trimf(capacity.universe, [30, 55, 80])
+    capacity["high"] = fuzz.trapmf(capacity.universe, [65, 85, 100, 100])
 
-  accessibility=ctrl.Antecedent(np.arange(0,11,1),'accessibility')
-  accessibility['low']=fuzz.trimf(accessibility.universe,[0,0,4])
-  accessibility['medium']=fuzz.trimf(accessibility.universe,[3,5,7])
-  accessibility['high']=fuzz.trimf(accessibility.universe,[6,10,10])
+    accessibility = ctrl.Antecedent(np.arange(0, 11, 1), "accessibility")
+    accessibility["low"] = fuzz.trapmf(accessibility.universe, [0, 0, 2, 4])
+    accessibility["medium"] = fuzz.trimf(accessibility.universe, [3, 5, 7])
+    accessibility["high"] = fuzz.trapmf(accessibility.universe, [6, 8, 10, 10])
 
-  suitability = ctrl.Consequent(np.arange(0, 101, 1), 'suitability')
-  suitability['low'] = fuzz.trimf(suitability.universe, [0, 0, 40])
-  suitability['medium'] = fuzz.trimf(suitability.universe, [30, 50, 70])
-  suitability['high'] = fuzz.trimf(suitability.universe, [60, 100, 100])
-  
-  elevation = ctrl.Antecedent(np.arange(0, 11, 1), 'elevation')
-  elevation['low'] = fuzz.trimf(elevation.universe, [0, 0, 4])
-  elevation['medium'] = fuzz.trimf(elevation.universe, [3, 5, 7])
-  elevation['high'] = fuzz.trimf(elevation.universe, [6, 10, 10])
+    elevation = ctrl.Antecedent(np.arange(0, 11, 1), "elevation")
+    elevation["low"] = fuzz.trapmf(elevation.universe, [0, 0, 2, 4])
+    elevation["medium"] = fuzz.trimf(elevation.universe, [3, 5, 7])
+    elevation["high"] = fuzz.trapmf(elevation.universe, [6, 8, 10, 10])
 
-  proximity = ctrl.Antecedent(np.arange(0, 11, 1), 'proximity')
-  proximity['very close'] = fuzz.trimf(proximity.universe, [0, 0, 3])
-  proximity['moderate'] = fuzz.trimf(proximity.universe, [2, 5, 8])
-  proximity['far'] = fuzz.trimf(proximity.universe, [7, 10, 10])
+    proximity = ctrl.Antecedent(np.arange(0, 11, 1), "proximity")
+    proximity["very_close"] = fuzz.trapmf(proximity.universe, [0, 0, 1, 3])
+    proximity["moderate"] = fuzz.trimf(proximity.universe, [2, 5, 8])
+    proximity["far"] = fuzz.trapmf(proximity.universe, [7, 9, 10, 10])
 
-  medical = ctrl.Antecedent(np.arange(0, 11, 1), 'medical')
-  medical['none'] = fuzz.trimf(medical.universe, [0, 0, 3])
-  medical['basic'] = fuzz.trimf(medical.universe, [2, 5, 7])
-  medical['advanced'] = fuzz.trimf(medical.universe, [6, 10, 10])
+    medical = ctrl.Antecedent(np.arange(0, 11, 1), "medical")
+    medical["none"] = fuzz.trapmf(medical.universe, [0, 0, 1, 3])
+    medical["basic"] = fuzz.trimf(medical.universe, [2, 5, 7])
+    medical["advanced"] = fuzz.trapmf(medical.universe, [6, 8, 10, 10])
+
+    suitability = ctrl.Consequent(np.arange(0, 101, 1), "suitability")
+    suitability["very_low"] = fuzz.trapmf(suitability.universe, [0, 0, 10, 25])
+    suitability["low"] = fuzz.trimf(suitability.universe, [15, 30, 45])
+    suitability["medium"] = fuzz.trimf(suitability.universe, [40, 55, 70])
+    suitability["high"] = fuzz.trimf(suitability.universe, [65, 78, 90])
+    suitability["excellent"] = fuzz.trapmf(suitability.universe, [85, 93, 100, 100])
+
+    rules = [
+        ctrl.Rule(
+            distance["near"]
+            & capacity["high"]
+            & accessibility["high"]
+            & elevation["high"]
+            & proximity["far"]
+            & medical["advanced"],
+            suitability["excellent"],
+        ),
+        ctrl.Rule(
+            distance["near"]
+            & capacity["high"]
+            & accessibility["high"]
+            & elevation["high"]
+            & proximity["moderate"]
+            & (medical["advanced"] | medical["basic"]),
+            suitability["high"],
+        ),
+        ctrl.Rule(
+            distance["medium"]
+            & capacity["high"]
+            & accessibility["high"]
+            & elevation["high"]
+            & proximity["far"]
+            & medical["advanced"],
+            suitability["high"],
+        ),
+        ctrl.Rule(
+            distance["near"]
+            & capacity["medium"]
+            & accessibility["high"]
+            & elevation["high"]
+            & proximity["moderate"]
+            & medical["advanced"],
+            suitability["high"],
+        ),
+        ctrl.Rule(
+            distance["medium"]
+            & capacity["medium"]
+            & accessibility["medium"]
+            & elevation["medium"]
+            & proximity["moderate"]
+            & medical["basic"],
+            suitability["medium"],
+        ),
+        ctrl.Rule(
+            distance["near"]
+            & capacity["low"]
+            & accessibility["high"]
+            & elevation["high"]
+            & (medical["basic"] | medical["advanced"]),
+            suitability["medium"],
+        ),
+        ctrl.Rule(
+            distance["far"] & capacity["low"],
+            suitability["low"],
+        ),
+        ctrl.Rule(
+            accessibility["low"] & distance["far"],
+            suitability["low"],
+        ),
+        ctrl.Rule(
+            elevation["low"] & proximity["very_close"],
+            suitability["very_low"],
+        ),
+        ctrl.Rule(
+            elevation["low"] & medical["none"],
+            suitability["low"],
+        ),
+        ctrl.Rule(
+            proximity["very_close"] & medical["none"] & accessibility["low"],
+            suitability["very_low"],
+        ),
+        ctrl.Rule(
+            capacity["high"] & elevation["high"] & proximity["far"],
+            suitability["high"],
+        ),
+        ctrl.Rule(
+            capacity["medium"] & accessibility["medium"] & elevation["high"],
+            suitability["medium"],
+        ),
+        ctrl.Rule(
+            distance["near"] & accessibility["high"] & medical["advanced"],
+            suitability["high"],
+        ),
+        ctrl.Rule(
+            distance["medium"] & accessibility["medium"] & medical["advanced"],
+            suitability["medium"],
+        ),
+        ctrl.Rule(
+            capacity["low"] & accessibility["low"],
+            suitability["low"],
+        ),
+        ctrl.Rule(
+            elevation["medium"] & proximity["moderate"] & medical["basic"],
+            suitability["medium"],
+        ),
+        ctrl.Rule(
+            accessibility["high"] & elevation["high"] & medical["advanced"],
+            suitability["high"],
+        ),
+        ctrl.Rule(
+            distance["far"] & proximity["very_close"],
+            suitability["low"],
+        ),
+        ctrl.Rule(
+            (distance["near"] | distance["medium"])
+            & (capacity["medium"] | capacity["high"])
+            & (accessibility["medium"] | accessibility["high"]),
+            suitability["medium"],
+        ),
+        ctrl.Rule(
+            (distance["near"] | distance["medium"] | distance["far"])
+            & (capacity["low"] | capacity["medium"] | capacity["high"])
+            & (accessibility["low"] | accessibility["medium"] | accessibility["high"]),
+            suitability["medium"],
+        ),
+    ]
+
+    return ctrl.ControlSystem(rules)
 
 
-  rule1  = ctrl.Rule(distance['near'] & capacity['high'] & accessibility['high'] & elevation['high'] & proximity['moderate'] & medical['advanced'], suitability['high'])
-  rule2  = ctrl.Rule(distance['near'] & capacity['medium'] & accessibility['high'] & elevation['high'] & proximity['far'] & medical['advanced'], suitability['high'])
-  rule3  = ctrl.Rule(distance['medium'] & capacity['high'] & accessibility['high'] & elevation['high'] & proximity['far'] & medical['advanced'], suitability['high'])
-  rule4  = ctrl.Rule(distance['near'] & capacity['high'] & accessibility['medium'] & elevation['high'] & proximity['moderate'] & medical['advanced'], suitability['high'])
-  rule5  = ctrl.Rule(distance['near'] & capacity['high'] & accessibility['high'] & elevation['medium'] & proximity['moderate'] & medical['advanced'], suitability['high'])
-  rule6  = ctrl.Rule(distance['medium'] & capacity['high'] & accessibility['high'] & elevation['medium'] & proximity['far'] & medical['advanced'], suitability['high'])
-  rule7  = ctrl.Rule(distance['near'] & capacity['medium'] & accessibility['high'] & elevation['high'] & proximity['moderate'] & medical['basic'], suitability['high'])
-  rule8  = ctrl.Rule(distance['near'] & capacity['high'] & accessibility['medium'] & elevation['high'] & proximity['far'] & medical['basic'], suitability['high'])
-  rule9  = ctrl.Rule(distance['medium'] & capacity['high'] & accessibility['medium'] & elevation['high'] & proximity['moderate'] & medical['advanced'], suitability['high'])
-  rule10 = ctrl.Rule(distance['near'] & capacity['medium'] & accessibility['medium'] & elevation['high'] & proximity['moderate'] & medical['advanced'], suitability['high'])
-  rule11 = ctrl.Rule(distance['medium'] & capacity['medium'] & accessibility['high'] & elevation['high'] & proximity['moderate'] & medical['advanced'], suitability['high'])
-  rule12 = ctrl.Rule(distance['near'] & capacity['high'] & accessibility['high'] & elevation['high'] & proximity['far'] & medical['basic'], suitability['high'])
-  rule13 = ctrl.Rule(distance['medium'] & capacity['medium'] & accessibility['medium'] & elevation['medium'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule14 = ctrl.Rule(distance['far'] & capacity['high'] & accessibility['medium'] & elevation['high'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule15 = ctrl.Rule(distance['medium'] & capacity['high'] & accessibility['low'] & elevation['medium'] & proximity['far'] & medical['advanced'], suitability['medium'])
-  rule16 = ctrl.Rule(distance['near'] & capacity['low'] & accessibility['medium'] & elevation['medium'] & proximity['moderate'] & medical['advanced'], suitability['medium'])
-  rule17 = ctrl.Rule(distance['near'] & capacity['medium'] & accessibility['medium'] & elevation['low'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule18 = ctrl.Rule(distance['medium'] & capacity['medium'] & accessibility['high'] & elevation['medium'] & proximity['far'] & medical['basic'], suitability['medium'])
-  rule19 = ctrl.Rule(distance['medium'] & capacity['medium'] & accessibility['medium'] & elevation['high'] & proximity['very close'] & medical['advanced'], suitability['medium'])
-  rule20 = ctrl.Rule(distance['medium'] & capacity['medium'] & accessibility['medium'] & elevation['low'] & proximity['far'] & medical['advanced'], suitability['medium'])
-  rule21 = ctrl.Rule(distance['near'] & capacity['medium'] & accessibility['low'] & elevation['high'] & proximity['moderate'] & medical['advanced'], suitability['medium'])
-  rule22 = ctrl.Rule(distance['far'] & capacity['high'] & accessibility['high'] & elevation['low'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule23 = ctrl.Rule(distance['near'] & capacity['medium'] & accessibility['medium'] & elevation['medium'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule24 = ctrl.Rule(distance['medium'] & capacity['medium'] & accessibility['medium'] & elevation['medium'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule25 = ctrl.Rule(distance['near'] & capacity['low'] & accessibility['high'] & elevation['medium'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule26 = ctrl.Rule(distance['far'] & capacity['medium'] & accessibility['medium'] & elevation['medium'] & proximity['moderate'] & medical['advanced'], suitability['medium'])
-  rule27 = ctrl.Rule(distance['medium'] & capacity['low'] & accessibility['high'] & elevation['high'] & proximity['far'] & medical['basic'], suitability['medium'])
-  rule28 = ctrl.Rule(distance['near'] & capacity['medium'] & accessibility['high'] & elevation['medium'] & proximity['very close'] & medical['basic'], suitability['medium'])
-  rule29 = ctrl.Rule(distance['medium'] & capacity['medium'] & accessibility['high'] & elevation['low'] & proximity['moderate'] & medical['advanced'], suitability['medium'])
-  rule30 = ctrl.Rule(distance['medium'] & capacity['high'] & accessibility['high'] & elevation['low'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule31 = ctrl.Rule(distance['far'] & capacity['medium'] & accessibility['high'] & elevation['high'] & proximity['moderate'] & medical['advanced'], suitability['medium'])
-  rule32 = ctrl.Rule(distance['near'] & capacity['medium'] & accessibility['medium'] & elevation['high'] & proximity['very close'] & medical['advanced'], suitability['medium'])
-  rule33 = ctrl.Rule(distance['far'] & capacity['low'] & accessibility['high'] & elevation['high'] & proximity['far'] & medical['advanced'], suitability['medium'])
-  rule34 = ctrl.Rule(distance['medium'] & capacity['high'] & accessibility['low'] & elevation['high'] & proximity['moderate'] & medical['advanced'], suitability['medium'])
-  rule35 = ctrl.Rule(distance['far'] & capacity['medium'] & accessibility['medium'] & elevation['high'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule36 = ctrl.Rule(distance['near'] & capacity['medium'] & accessibility['medium'] & elevation['medium'] & proximity['moderate'] & medical['basic'], suitability['medium'])
-  rule37 = ctrl.Rule(distance['far'] & capacity['low'] & accessibility['low'] & elevation['low'] & proximity['very close'] & medical['none'], suitability['low'])
-  rule38 = ctrl.Rule(distance['far'] & capacity['low'] & accessibility['medium'] & elevation['low'] & proximity['very close'] & medical['none'], suitability['low'])
-  rule39 = ctrl.Rule(distance['medium'] & capacity['low'] & accessibility['low'] & elevation['low'] & proximity['very close'] & medical['none'], suitability['low'])
-  rule40 = ctrl.Rule(distance['medium'] & capacity['low'] & accessibility['medium'] & elevation['low'] & proximity['very close'] & medical['none'], suitability['low'])
-  rule41 = ctrl.Rule(distance['far'] & capacity['medium'] & accessibility['low'] & elevation['low'] & proximity['very close'] & medical['none'], suitability['low'])
-  rule42 = ctrl.Rule(distance['medium'] & capacity['low'] & accessibility['medium'] & elevation['low'] & proximity['moderate'] & medical['none'], suitability['low'])
-  rule43 = ctrl.Rule(distance['far'] & capacity['low'] & accessibility['low'] & elevation['medium'] & proximity['very close'] & medical['none'], suitability['low'])
-  rule44 = ctrl.Rule(distance['far'] & capacity['low'] & accessibility['low'] & elevation['low'] & proximity['moderate'] & medical['none'], suitability['low'])
-  rule45 = ctrl.Rule(distance['near'] & capacity['low'] & accessibility['low'] & elevation['low'] & proximity['very close'] & medical['none'], suitability['low'])
-  rule46 = ctrl.Rule(distance['medium'] & capacity['low'] & accessibility['low'] & elevation['low'] & proximity['moderate'] & medical['none'], suitability['low'])
-  rule47 = ctrl.Rule(distance['medium'] & capacity['low'] & accessibility['low'] & elevation['low'] & proximity['far'] & medical['none'], suitability['low'])
-  rule48 = ctrl.Rule(distance['far'] & capacity['low'] & accessibility['low'] & elevation['low'] & proximity['far'] & medical['none'], suitability['low'])
-  rule49 = ctrl.Rule(distance['far'] & capacity['low'] & accessibility['low'] & elevation['low'] & proximity['very close'] & medical['basic'], suitability['low'])
+def get_fuzzy_simulator(
+    capacity_val,
+    distance_val,
+    accessibility_val,
+    elevation_val,
+    proximity_val,
+    medical_val,
+):
+    system = _build_control_system()
+    sim = ctrl.ControlSystemSimulation(system)
 
-  rule50 = ctrl.Rule(antecedent=((distance['near'] | distance['medium'] | distance['far']) & 
-                               (capacity['low'] | capacity['medium'] | capacity['high'])), 
-                   consequent=suitability['medium'])
+    sim.input["capacity"] = capacity_val
+    sim.input["distance"] = distance_val
+    sim.input["accessibility"] = accessibility_val
+    sim.input["elevation"] = elevation_val
+    sim.input["proximity"] = proximity_val
+    sim.input["medical"] = medical_val
 
-  suitability_ctrl = ctrl.ControlSystem([
-    rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8, rule9, rule10,
-    rule11, rule12, rule13, rule14, rule15, rule16, rule17, rule18, rule19, rule20,
-    rule21, rule22, rule23, rule24, rule25, rule26, rule27, rule28, rule29, rule30,
-    rule31, rule32, rule33, rule34, rule35, rule36, rule37, rule38, rule39, rule40,
-    rule41, rule42, rule43, rule44, rule45, rule46, rule47, rule48, rule49, rule50
-  ])
-  
-  sim=ctrl.ControlSystemSimulation(suitability_ctrl)
-  
-  sim.input['capacity'] = capacity_val
-  sim.input['distance'] = distance_val
-  sim.input['accessibility'] = accessibility_val
-  sim.input['elevation'] = elevation_val
-  sim.input['proximity'] = proximity_val
-  sim.input['medical'] = medical_val
-
-  sim.compute()
-  return sim.output['suitability']
+    sim.compute()
+    return sim.output["suitability"]

@@ -1,27 +1,213 @@
-function buildScoreChart(recs) {
+const state = {
+  scoreChart: null,
+  inputChart: null,
+  map: null,
+  markerLayer: null,
+  autoRefreshTimer: null,
+};
+
+function renderUnavailableState(node, message) {
+  if (!node) return;
+  const tagName = node.tagName?.toLowerCase();
+  if (tagName === "canvas") {
+    const parent = node.parentElement;
+    if (!parent) return;
+
+    let fallback = parent.querySelector("[data-fallback-for='" + node.id + "']");
+    if (!fallback) {
+      fallback = document.createElement("div");
+      fallback.dataset.fallbackFor = node.id;
+      fallback.className = "empty-state";
+      parent.appendChild(fallback);
+    }
+    node.style.display = "none";
+    fallback.innerHTML = `<strong>${message}</strong>`;
+    return;
+  }
+
+  node.innerHTML = `
+    <div class="empty-state">
+      <strong>${message}</strong>
+    </div>
+  `;
+}
+
+function titleCase(value) {
+  return String(value || "")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function setStatus(message, kind = "idle") {
+  const banner = document.getElementById("statusBanner");
+  if (!banner) return;
+
+  banner.textContent = message;
+  banner.classList.remove("is-loading", "is-error");
+  if (kind === "loading") banner.classList.add("is-loading");
+  if (kind === "error") banner.classList.add("is-error");
+}
+
+function updateDashboardVisibility(data) {
+  const panel = document.getElementById("dashboardPanel");
+  if (!panel) return;
+
+  const hasData = Boolean(data);
+  panel.classList.toggle("has-data", hasData);
+  panel.classList.toggle("is-empty", !hasData);
+}
+
+function updateDatasetInfo(dataset) {
+  const countNode = document.getElementById("summaryDatasetCount");
+  if (countNode) {
+    countNode.textContent = dataset?.record_count ?? 0;
+  }
+}
+
+function renderBestMatch(best) {
+  const node = document.getElementById("bestMatchCard");
+  if (!node) return;
+
+  if (!best) {
+    node.innerHTML = `
+      <div class="empty-state">
+        <strong>No best match yet.</strong>
+        <div class="mt-2">Change the filters to search for shelters.</div>
+      </div>
+    `;
+    return;
+  }
+
+  node.innerHTML = `
+    <div class="best-header">
+      <div>
+        <p class="eyebrow mb-1">Best Match</p>
+        <h2 class="best-title">${best.name}</h2>
+        <div class="best-meta">
+          <span class="meta-pill">${best.distance} km away</span>
+          <span class="meta-pill">${best.available_beds} beds free</span>
+          <span class="meta-pill">${titleCase(best.accessibility)} accessibility</span>
+        </div>
+      </div>
+      <div class="best-score">${best.score}</div>
+    </div>
+    <div class="best-tags">
+      <span class="tag-pill">Elevation: ${titleCase(best.elevation_level)}</span>
+      <span class="tag-pill">Water proximity: ${titleCase(best.proximity_to_water)}</span>
+      <span class="tag-pill">Medical: ${titleCase(best.medical_facility)}</span>
+    </div>
+  `;
+}
+
+function renderSummary(summary) {
+  document.getElementById("summaryCount").textContent = summary?.count ?? 0;
+  document.getElementById("summaryDistance").textContent = `${summary?.max_distance_km ?? 0} km`;
+  document.getElementById("summaryAccessibility").textContent = titleCase(summary?.requested_accessibility || "-");
+}
+
+function renderResults(recommendations) {
+  const node = document.getElementById("resultsList");
+  if (!node) return;
+
+  if (!recommendations || recommendations.length === 0) {
+    node.innerHTML = `
+      <div class="empty-state">
+        <strong>No shelters matched this combination.</strong>
+        <div class="mt-2">Try increasing distance or lowering the accessibility requirement.</div>
+      </div>
+    `;
+    return;
+  }
+
+  node.innerHTML = recommendations
+    .map(
+      (shelter, index) => `
+        <article class="result-item">
+          <div class="result-head">
+            <div>
+              <span class="result-rank">Rank #${index + 1}</span>
+              <h4 class="result-name">${shelter.name}</h4>
+            </div>
+            <div class="result-score">${shelter.score}</div>
+          </div>
+          <div class="score-track">
+            <div class="score-fill" style="width: ${shelter.score}%"></div>
+          </div>
+          <div class="result-line">
+            ${shelter.distance} km away, ${shelter.available_beds} beds available, ${titleCase(shelter.accessibility)} access
+          </div>
+          <div class="result-tags">
+            <span class="mini-tag">Elevation ${titleCase(shelter.elevation_level)}</span>
+            <span class="mini-tag">Water ${titleCase(shelter.proximity_to_water)}</span>
+            <span class="mini-tag">Medical ${titleCase(shelter.medical_facility)}</span>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function destroyChart(chartRef) {
+  if (chartRef) {
+    chartRef.destroy();
+  }
+}
+
+function buildScoreChart(recommendations) {
   const canvas = document.getElementById("scoreChart");
-  if (!canvas || !recs || recs.length === 0) return;
+  if (!canvas) return;
 
-  const labels = recs.map((r) => r.name);
-  const values = recs.map((r) => r.score);
+  if (typeof Chart === "undefined") {
+    renderUnavailableState(canvas, "Score chart unavailable because Chart.js did not load.");
+    return;
+  }
 
-  new Chart(canvas, {
+  canvas.style.display = "";
+  canvas.parentElement?.querySelector("[data-fallback-for='scoreChart']")?.remove();
+
+  destroyChart(state.scoreChart);
+  if (!recommendations || recommendations.length === 0) {
+    state.scoreChart = null;
+    return;
+  }
+
+  state.scoreChart = new Chart(canvas, {
     type: "bar",
     data: {
-      labels,
+      labels: recommendations.map((item) => item.name),
       datasets: [
         {
-          label: "Suitability",
-          data: values,
-          borderRadius: 6,
-          backgroundColor: "rgba(5,102,141,0.75)",
+          data: recommendations.map((item) => item.score),
+          borderRadius: 10,
+          backgroundColor: [
+            "#c96c32",
+            "#dd8f4b",
+            "#f0b363",
+            "#2a8a7d",
+            "#1d5b52",
+          ],
         },
       ],
     },
     options: {
-      plugins: { legend: { display: false } },
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+      },
       scales: {
-        y: { beginAtZero: true, max: 100 },
+        x: {
+          ticks: { color: "#5d655f" },
+          grid: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { color: "#5d655f" },
+          grid: { color: "rgba(24, 33, 38, 0.08)" },
+        },
       },
     },
   });
@@ -29,15 +215,28 @@ function buildScoreChart(recs) {
 
 function buildInputChart(inputs) {
   const canvas = document.getElementById("inputChart");
-  if (!canvas || !inputs) return;
+  if (!canvas) return;
 
-  new Chart(canvas, {
+  if (typeof Chart === "undefined") {
+    renderUnavailableState(canvas, "Input chart unavailable because Chart.js did not load.");
+    return;
+  }
+
+  canvas.style.display = "";
+  canvas.parentElement?.querySelector("[data-fallback-for='inputChart']")?.remove();
+
+  destroyChart(state.inputChart);
+  if (!inputs) {
+    state.inputChart = null;
+    return;
+  }
+
+  state.inputChart = new Chart(canvas, {
     type: "radar",
     data: {
-      labels: ["Distance", "Accessibility", "Elevation", "Water Proximity", "Medical Need"],
+      labels: ["Distance", "Accessibility", "Elevation", "Water Proximity", "Medical"],
       datasets: [
         {
-          label: "User Input (numeric mapping)",
           data: [
             inputs.distance || 0,
             inputs.accessibility || 0,
@@ -45,51 +244,189 @@ function buildInputChart(inputs) {
             inputs.proximity || 0,
             inputs.medical || 0,
           ],
-          backgroundColor: "rgba(0,168,150,0.25)",
-          borderColor: "rgba(0,168,150,1)",
-          pointBackgroundColor: "rgba(0,168,150,1)",
+          fill: true,
+          backgroundColor: "rgba(29, 91, 82, 0.16)",
+          borderColor: "#1d5b52",
+          pointBackgroundColor: "#c96c32",
+          pointBorderColor: "#fff8ef",
+          pointRadius: 4,
         },
       ],
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+      },
       scales: {
         r: {
           suggestedMin: 0,
           suggestedMax: 10,
-          ticks: { stepSize: 2 },
+          ticks: {
+            stepSize: 2,
+            color: "#5d655f",
+            backdropColor: "transparent",
+          },
+          grid: { color: "rgba(24, 33, 38, 0.08)" },
+          angleLines: { color: "rgba(24, 33, 38, 0.08)" },
+          pointLabels: { color: "#182126" },
         },
       },
     },
   });
 }
 
-function buildMap(recs) {
-  const mapNode = document.getElementById("map");
-  if (!mapNode || !recs || recs.length === 0) return;
+function ensureMap() {
+  if (typeof L === "undefined") {
+    return null;
+  }
 
-  const map = L.map("map").setView([20.306, 85.820], 12);
+  if (state.map) return state.map;
+
+  state.map = L.map("map", {
+    zoomControl: false,
+  }).setView([20.306, 85.82], 12);
+
+  L.control.zoom({ position: "bottomright" }).addTo(state.map);
+
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(map);
+  }).addTo(state.map);
+
+  state.markerLayer = L.layerGroup().addTo(state.map);
+  return state.map;
+}
+
+function buildMap(recommendations) {
+  const mapNode = document.getElementById("map");
+  if (!mapNode) return;
+
+  const map = ensureMap();
+  if (!map) {
+    renderUnavailableState(mapNode, "Map unavailable because Leaflet did not load.");
+    return;
+  }
+
+  state.markerLayer.clearLayers();
+
+  if (!recommendations || recommendations.length === 0) {
+    map.setView([20.306, 85.82], 12);
+    return;
+  }
 
   const bounds = [];
-  recs.forEach((r) => {
-    const marker = L.marker([r.lat, r.lng]).addTo(map);
+  recommendations.forEach((item, index) => {
+    const marker = L.marker([item.lat, item.lng]).addTo(state.markerLayer);
     marker.bindPopup(
-      `<strong>${r.name}</strong><br/>Score: ${r.score}<br/>Distance: ${r.distance} km`
+      `<strong>${item.name}</strong><br/>Rank #${index + 1}<br/>Score: ${item.score}<br/>Distance: ${item.distance} km<br/>Beds: ${item.available_beds}`
     );
-    bounds.push([r.lat, r.lng]);
+    bounds.push([item.lat, item.lng]);
   });
 
-  if (bounds.length > 0) {
-    map.fitBounds(bounds, { padding: [30, 30] });
+  if (bounds.length === 1) {
+    map.setView(bounds[0], 13);
+  } else {
+    map.fitBounds(bounds, { padding: [28, 28] });
+  }
+
+  setTimeout(() => map.invalidateSize(), 120);
+}
+
+function renderDashboard(data) {
+  updateDashboardVisibility(data);
+  updateDatasetInfo(data?.dataset || window.DATASET_INFO || null);
+  renderBestMatch(data?.best || null);
+  renderSummary(data?.summary || null);
+  renderResults(data?.recommendations || []);
+  buildScoreChart(data?.recommendations || []);
+  buildInputChart(data?.inputs_numeric || null);
+  buildMap(data?.recommendations || []);
+}
+
+function serializeForm(form) {
+  const formData = new FormData(form);
+  return {
+    num_people: Number(formData.get("num_people")),
+    distance_level: formData.get("distance_level"),
+    accessibility_required: formData.get("accessibility_required"),
+    elevation_input: formData.get("elevation_input"),
+    proximity_input: formData.get("proximity_input"),
+    medical_input: formData.get("medical_input"),
+  };
+}
+
+async function fetchRecommendations(form) {
+  const payload = serializeForm(form);
+  if (!Number.isInteger(payload.num_people) || payload.num_people < 1) {
+    setStatus("People count must be a whole number greater than zero.", "error");
+    return;
+  }
+
+  setStatus("Recomputing fuzzy ranking...", "loading");
+
+  const response = await fetch("/api/recommend", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Request failed.");
+  }
+
+  renderDashboard(data);
+  if (data.recommendations?.length) {
+    setStatus(`Updated ${data.recommendations.length} shelter recommendations.`, "idle");
+  } else {
+    setStatus("No shelters matched the current filters.", "idle");
   }
 }
 
+function scheduleRefresh(form) {
+  window.clearTimeout(state.autoRefreshTimer);
+  state.autoRefreshTimer = window.setTimeout(() => {
+    fetchRecommendations(form).catch((error) => {
+      setStatus(error.message, "error");
+    });
+  }, 260);
+}
+
+function resetForm(form) {
+  form.reset();
+  form.querySelector("#num_people").value = "1";
+  scheduleRefresh(form);
+}
+
 (() => {
-  const data = window.RECOMMENDATION_DATA;
-  if (!data) return;
-  buildScoreChart(data.recommendations);
-  buildInputChart(data.inputs_numeric);
-  buildMap(data.recommendations);
+  const form = document.getElementById("recommendForm");
+  if (!form) return;
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    fetchRecommendations(form).catch((error) => {
+      setStatus(error.message, "error");
+    });
+  });
+
+  form.addEventListener("input", (event) => {
+    if (event.target.matches("input, select")) {
+      scheduleRefresh(form);
+    }
+  });
+
+  form.addEventListener("change", (event) => {
+    if (event.target.matches("select")) {
+      scheduleRefresh(form);
+    }
+  });
+
+  document.getElementById("resetButton")?.addEventListener("click", () => resetForm(form));
+
+  if (window.RECOMMENDATION_DATA) {
+    renderDashboard(window.RECOMMENDATION_DATA);
+  } else {
+    renderDashboard(null);
+  }
 })();

@@ -17,9 +17,17 @@ This project recommends safe flood shelters using fuzzy logic. It now supports:
 
 ## Project Structure
 
+- `flood_app/config.py`: environment-based application config
+- `flood_app/routes/`: Flask web and API routes
+- `flood_app/services/`: recommendation service + service factory
+- `flood_app/repositories/`: database access layer
+- `flood_app/models/`: SQLAlchemy models
+- `flood_app/schemas/`: shared input choices and validation
 - `membership_func.py`: fuzzy membership functions and rule base
-- `recommender.py`: shared recommendation engine used by all interfaces
+- `recommender.py`: compatibility wrapper for legacy CLI/desktop entry points
 - `database.py`: creates and seeds `shelter.db`
+- `import_shelters.py`: imports a real/custom shelter CSV into `shelter.db`
+- `shelters_template.csv`: starter CSV layout for real shelter imports
 - `user_input.py`: CLI app
 - `desktop_gui.py`: desktop app (Tkinter)
 - `app.py`: Flask backend + routes
@@ -35,6 +43,16 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 python database.py
+```
+
+Optional environment overrides:
+
+```bash
+set FLASK_DEBUG=false
+set FLASK_RUN_HOST=0.0.0.0
+set FLASK_RUN_PORT=5000
+set DB_PATH=C:\path\to\shelter.db
+set DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/flood_shelter
 ```
 
 ## Run
@@ -66,6 +84,66 @@ The `shelters` table includes:
 - operational fields: capacity, available beds, distance, accessibility
 - risk/medical fields: elevation level, proximity to water, medical facility
 - map fields: `latitude`, `longitude`
+
+The app now also tracks simple dataset metadata in `app_metadata` so the UI can distinguish demo data from imported data.
+
+The backend model layer is now scaffolded for the next production entities:
+
+- `users`
+- `shelter_status`
+- `recommendation_logs`
+- `alerts`
+- `audit_logs`
+
+These are defined as SQLAlchemy models and are intended to be created through migrations, not by `database.py`.
+
+## PostgreSQL And Migrations
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Point the app at PostgreSQL:
+
+```bash
+set DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/flood_shelter
+```
+
+Initialize migrations once:
+
+```bash
+flask --app "flood_app:create_app" db init
+```
+
+Create and apply a migration:
+
+```bash
+flask --app "flood_app:create_app" db migrate -m "initial production schema"
+flask --app "flood_app:create_app" db upgrade
+```
+
+## Replacing Demo Data
+
+The default `database.py` seeds demo shelters such as `Shelter A` to `Shelter Z`. To replace them with a real dataset:
+
+```bash
+python import_shelters.py shelters_template.csv
+```
+
+Expected CSV columns:
+
+- `name`
+- `capacity`
+- `available_beds`
+- `distance`
+- `accessibility`
+- `elevation_level`
+- `proximity_to_water`
+- `medical_facility`
+- `latitude`
+- `longitude`
 
 ## Deploy
 

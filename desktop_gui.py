@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from flood_app.schemas.recommendation import CHOICES, validate_num_people
 from recommender import recommend_shelters
 
 
@@ -32,11 +33,11 @@ class ShelterGUI:
         ttk.Label(row1, text="People").pack(side="left", padx=6)
         ttk.Entry(row1, textvariable=self.num_people, width=8).pack(side="left")
 
-        self._combo(row1, "Distance", self.distance, ["near", "medium", "far"])
-        self._combo(row1, "Accessibility", self.accessibility, ["easy", "moderate", "difficult"])
-        self._combo(row2, "Elevation", self.elevation, ["low", "medium", "high"])
-        self._combo(row2, "Water Proximity", self.proximity, ["very close", "moderate", "far"])
-        self._combo(row2, "Medical", self.medical, ["none", "basic", "advanced"])
+        self._combo(row1, "Distance", self.distance, CHOICES["distance_level"])
+        self._combo(row1, "Accessibility", self.accessibility, CHOICES["accessibility_required"])
+        self._combo(row2, "Elevation", self.elevation, CHOICES["elevation_input"])
+        self._combo(row2, "Water Proximity", self.proximity, CHOICES["proximity_input"])
+        self._combo(row2, "Medical", self.medical, CHOICES["medical_input"])
 
         ttk.Button(frame, text="Recommend Shelters", command=self.run_recommendation).pack(
             padx=12, pady=(2, 10), anchor="w"
@@ -71,9 +72,7 @@ class ShelterGUI:
 
     def run_recommendation(self):
         try:
-            num_people = int(self.num_people.get().strip())
-            if num_people < 1:
-                raise ValueError
+            num_people = validate_num_people(self.num_people.get().strip())
         except ValueError:
             messagebox.showerror("Invalid Input", "People count must be a positive integer.")
             return

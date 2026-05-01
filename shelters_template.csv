@@ -1,0 +1,3 @@
+name,capacity,available_beds,distance,accessibility,elevation_level,proximity_to_water,medical_facility,latitude,longitude
+Community Hall Sector 1,120,45,3.2,easy,high,far,advanced,20.3121,85.8243
+School Relief Center,80,20,2.4,moderate,medium,moderate,basic,20.3185,85.8127
